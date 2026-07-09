@@ -1,0 +1,40 @@
+
+
+services:
+  # Redis with Vector Search (RediSearch) and JSON modules
+  redis:
+    image: redis/redis-stack-server:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # The Proxy server that handles the Xenova vector models
+  proxy:
+    build: .
+    command: npm run proxy
+    ports:
+      - "3334:3334"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - PROXY_PORT=3334
+      - ALLOWED_ORIGIN=http://localhost:3333
+    depends_on:
+      - redis
+    # Allow more memory if vectors are large
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  # The Frontend UI serving index.html
+  frontend:
+    build: .
+    command: npm run serve
+    ports:
+      - "3333:3333"
+    depends_on:
+      - proxy
+
+volumes:
+  redis_data:

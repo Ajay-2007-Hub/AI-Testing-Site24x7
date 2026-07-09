@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Test with AI — Site24x7 API Search</title>
+  <meta name="description" content="Search and explore all Site24x7 Admin APIs across 15 feature modules. Find endpoints, data fields, and payloads instantly." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+
+<div id="splashScreen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#f8fafc; z-index:9999; display:flex; align-items:center; justify-content:center; transition:opacity 0.6s ease, visibility 0.6s ease;">
+  <img src="./src/assets/zoho-animation.gif" alt="Loading..." style="height: 140px; mix-blend-mode: multiply;" />
+</div>
+
+<script>
+  window.addEventListener('load', function() {
+    setTimeout(function() {
+      var splash = document.getElementById('splashScreen');
+      if (splash) {
+        splash.style.opacity = '0';
+        splash.style.visibility = 'hidden';
+        setTimeout(function() { splash.style.display = 'none'; }, 600);
+      }
+    }, 1800);
+  });
+</script><!-- Top Nav -->
+<nav class="top-nav">
+  <div class="nav-left">
+    <a href="https://www.site24x7.com/app/demo" target="_blank" rel="noopener noreferrer" style="display:flex; align-items:center; text-decoration:none;">
+      <img src="./src/assets/site24x7.png" alt="Site24x7 Logo" class="nav-logo" />
+    </a>
+    <span class="nav-by-text">by</span>
+    <img src="./src/assets/zoho.png" alt="Zoho Logo" class="nav-zoho" />
+  </div>
+  <div class="nav-center">
+    <span class="nav-title">Test with AI</span>
+  </div>
+  <div class="nav-right">
+    <button id="themeToggleBtn" class="settings-btn" title="Toggle Dark Mode">
+      <span class="settings-icon">&#9728;</span>
+    </button>
+    <span class="nav-stat">&#128202; <strong id="hTotalCount">720 endpoints</strong></span>
+    <div class="proxy-indicator" title="Local proxy status">
+      <div class="proxy-dot" id="proxyDot"></div>
+      <span id="proxyLabel">Proxy: Off</span>
+    </div>
+    <button class="settings-btn" onclick="openSettings()"><span class="settings-icon">&#9881;</span> Settings</button>
+  </div>
+</nav>
+
+<!-- Settings Modal -->
+<div class="settings-modal-overlay" id="settingsModal">
+  <div class="settings-modal">
+    <div class="sm-header">
+      <span class="sm-title">&#9881; Settings — Live API Testing</span>
+      <button class="sm-close" onclick="closeSettings()" title="Close">&#10005;</button>
+    </div>
+
+    <div class="sm-section-title">Session Cookie</div>
+    <p class="sm-desc">
+      Paste your Site24x7 session cookie below. This is sent to the local proxy server (<code>localhost:3334</code>) and never leaves your machine.
+    </p>
+    <div class="sm-steps">
+      <ol>
+        <li>Open <strong>site24x7.com/app/demo</strong> in Chrome</li>
+        <li>Press <strong>F12</strong> &rarr; Network tab &rarr; filter by Fetch/XHR</li>
+        <li>Click any <code>/app/api/</code> request &rarr; Headers &rarr; copy the <strong>Cookie:</strong> value</li>
+      </ol>
+    </div>
+    <textarea id="cookieInput" placeholder="zaaid=...; JSESSIONID=...; CT_CSRF_TOKEN=..."></textarea>
+
+    <div class="sm-section-title" style="margin-top:20px;">OAuth Token (Required for some APIs)</div>
+    <p class="sm-desc">
+      From the same request headers, copy the <strong>Authorization</strong> value.
+    </p>
+    <textarea id="authTokenInput" placeholder="Zoho-oauthtoken 1000.b2a5fbfa0d2ed..."></textarea>
+
+    <!-- <div class="sm-section-title" style="margin-top:20px;">AI Agent Configuration</div>
+    <p class="sm-desc">Select your LLM provider and paste your API key to enable the AI Agent.</p>
+    <div style="margin-bottom:10px;">
+      <select id="llmProviderSelect" style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-family:inherit; font-size:12px; outline:none; background:#fafafa;">
+        <option value="gemini">Google Gemini</option>
+        <option value="openai">OpenAI</option>
+      </select>
+    </div>
+    <div style="margin-bottom:10px;">
+      <input type="text" id="geminiModelInput" placeholder="Model Name (e.g. gemini-2.5-flash, gemini-1.5-pro)" style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-family:inherit; font-size:12px; outline:none; background:#fafafa;" />
+    </div>
+    <textarea id="geminiKeyInput" placeholder="Paste your API key here..." style="min-height: 40px;"></textarea> -->
+    
+    <div class="sm-section-title" style="margin-top:20px;">Proxy Configuration</div>
+    <p class="sm-desc">The URL of the local proxy server running proxy.js.</p>
+    <div style="margin-bottom:10px;">
+      <input type="text" id="proxyUrlInput" placeholder="http://localhost:3334" style="width:100%; border:1px solid #d1d5db; border-radius:6px; padding:8px 10px; font-family:inherit; font-size:12px; outline:none; background:#fafafa;" />
+    </div>
+    <div class="sm-footer">
+      <div class="sm-proxy-status">
+        <div class="sm-proxy-dot" id="smProxyDot"></div>
+        <span id="smProxyLabel">Checking proxy…</span>
+      </div>
+      <button class="sm-save-btn" id="saveCookieBtn" onclick="saveCookie()">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- Search Section -->
+<div class="search-section">
+  <div class="search-row">
+    <div class="search-box-wrapper">
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="list the monitor groups (Press Cmd/Ctrl + K)" autocomplete="off" spellcheck="false" />
+        <button id="clearBtn" title="Clear">&#10005;</button>
+      </div>
+
+    </div>
+    <select id="searchType" class="search-type-select">
+      <option value="keyword">Keyword search (no AI)</option>
+      <option value="semantic">Semantic Search (AI Vector)</option>
+    </select>
+    <button id="searchBtn">&#128269; Search</button>
+  </div>
+  
+  <!-- Suggested Queries -->
+  <div class="suggested-queries">
+    <span class="sq-label">Suggested:</span>
+    <button class="sq-pill" onclick="runSuggestedQuery('Find all monitors')">Find all monitors</button>
+    <button class="sq-pill" onclick="runSuggestedQuery('How to delete an SLA')">How to delete an SLA</button>
+    <button class="sq-pill" onclick="runSuggestedQuery('List alert reports')">List alert reports</button>
+  </div>
+
+  <div class="tabs-row">
+    <button class="tab-btn active" data-tab="results">Results</button>
+    <button class="tab-btn" data-tab="ai" style="color: #1d4ed8; font-weight: 600;">✨ AI Agent</button>
+    <button class="tab-btn" data-tab="history">Q&amp;A History <span class="tab-badge" id="historyBadge">0</span></button>
+    <button class="tab-btn" data-tab="dataset">Dataset <span class="tab-badge" id="datasetBadge">0</span></button>
+  </div>
+</div>
+
+<!-- Layout -->
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-section-title">Feature Modules</div>
+    <div id="sidebarSheets"></div>
+
+    <div class="sidebar-divider"></div>
+    <div class="method-filters-label">HTTP Method</div>
+    <div id="methodFilters">
+      <button class="method-filter-btn active" data-method="GET">GET</button>
+      <button class="method-filter-btn active" data-method="POST">POST</button>
+      <button class="method-filter-btn active" data-method="PUT">PUT</button>
+      <button class="method-filter-btn active" data-method="DELETE">DELETE</button>
+      <button class="method-filter-btn active" data-method="PATCH">PATCH</button>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="method-filters-label">Module Filter</div>
+    <div class="module-chips-bar"><div id="moduleChips"></div></div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main-area">
+    <div class="result-meta-bar">
+      <span id="resultCount">Loading…</span>
+    </div>
+    <div id="resultsPane">
+      <div class="no-results"><div class="nr-icon">&#9889;</div><h3>Loading…</h3></div>
+    </div>
+  </main>
+
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script type="module" src="./src/client.js?v=2"></script>
+</body>
+</html>
