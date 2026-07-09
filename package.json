@@ -8,5 +8,8 @@
     "proxy": "npm run proxy --prefix AI-Testing-Site24x7-Final",
     "start": "npm run build --prefix AI-Testing-Site24x7-Final && npx serve AI-Testing-Site24x7-Final --listen 3333 --no-clipboard",
     "dev": "npm run build --prefix AI-Testing-Site24x7-Final && start cmd /k \"npm run proxy --prefix AI-Testing-Site24x7-Final\" && npx serve AI-Testing-Site24x7-Final --listen 3333 --no-clipboard"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.38.0"
   }
 }
