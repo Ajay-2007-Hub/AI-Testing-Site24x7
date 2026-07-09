@@ -1,0 +1,12 @@
+{
+  "name": "site24x7-api-search-root",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "npm run build --prefix AI-Testing-Site24x7-tanishka",
+    "serve": "npm run serve --prefix AI-Testing-Site24x7-tanishka",
+    "proxy": "npm run proxy --prefix AI-Testing-Site24x7-tanishka",
+    "start": "npm start --prefix AI-Testing-Site24x7-tanishka",
+    "dev": "npm run dev --prefix AI-Testing-Site24x7-tanishka"
+  }
+}
