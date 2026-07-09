@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "npm run build --prefix AI-Testing-Site24x7-tanishka",
-    "serve": "npm run serve --prefix AI-Testing-Site24x7-tanishka",
-    "proxy": "npm run proxy --prefix AI-Testing-Site24x7-tanishka",
-    "start": "npm start --prefix AI-Testing-Site24x7-tanishka",
-    "dev": "npm run dev --prefix AI-Testing-Site24x7-tanishka"
+    "build": "npm run build --prefix AI-Testing-Site24x7-Final",
+    "serve": "npx serve AI-Testing-Site24x7-Final --listen 3333 --no-clipboard",
+    "proxy": "npm run proxy --prefix AI-Testing-Site24x7-Final",
+    "start": "npm run build --prefix AI-Testing-Site24x7-Final && npx serve AI-Testing-Site24x7-Final --listen 3333 --no-clipboard",
+    "dev": "npm run build --prefix AI-Testing-Site24x7-Final && start cmd /k \"npm run proxy --prefix AI-Testing-Site24x7-Final\" && npx serve AI-Testing-Site24x7-Final --listen 3333 --no-clipboard"
   }
 }
