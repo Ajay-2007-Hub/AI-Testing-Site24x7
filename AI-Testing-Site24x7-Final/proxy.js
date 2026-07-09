@@ -26,6 +26,7 @@ let storedAuthToken = '';
 const Redis = require('ioredis');
 const fs = require('fs');
 const dbHelper = require('./db');
+const accuracyHelper = require('./accuracy');
 let extractor = null;
 let redisClient = null;
 let vectorDB = null; // fallback in-memory if Redis KNN fails
@@ -174,7 +175,15 @@ const server = http.createServer(async (req, res) => {
       return json(res, 400, { ok: false, message: 'Invalid JSON body: ' + e.message });
     }
   }
-
+  // ── GET /accuracy_stats ─────────────────────────────────────────────────────
+  if (path === '/accuracy_stats' && req.method === 'GET') {
+    try {
+      const stats = accuracyHelper.getAccuracyStats();
+      return json(res, 200, stats);
+    } catch (e) {
+      return json(res, 500, { error: 'Failed to compute accuracy stats: ' + e.message });
+    }
+  }
   // ── GET /semantic_search ────────────────────────────────────────────────────
   if (path === '/semantic_search' && req.method === 'GET') {
     if (!extractor) {
