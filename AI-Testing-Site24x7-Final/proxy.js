@@ -11,6 +11,7 @@
  *   *    /proxy?url=<url> — Forward request to site24x7.com
  */
 
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const http  = require('http');
 const https = require('https');
 
@@ -23,13 +24,11 @@ let storedCookie = '';
 let storedAuthToken = '';
 
 // ─── Semantic Search Engine ───────────────────────────────────────────────────
-const Redis = require('ioredis');
+const vectorStore = require('./redis_store');
 const fs = require('fs');
 const dbHelper = require('./db');
 const accuracyHelper = require('./accuracy');
 let extractor = null;
-let redisClient = null;
-let vectorDB = null; // fallback in-memory if Redis KNN fails
 
 async function initVectorEngine() {
   try {
@@ -37,33 +36,12 @@ async function initVectorEngine() {
     const transformers = await import('@xenova/transformers');
     const pipeline = transformers.pipeline;
     extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-    console.log('[proxy] Model loaded. Connecting to Redis...');
-    
-    redisClient = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-    redisClient.on('error', err => console.error('[proxy] Redis Client Error', err.message));
-    
-    // Check if the HASH-based index exists (correct binary format)
-    try {
-      const info = await redisClient.call('FT.INFO', 'idx:api_vectors');
-      console.log('[proxy] Redis HASH index detected. Semantic Search via Redis is READY.');
-    } catch(e) {
-      console.warn('[proxy] No Redis index found or error. Falling back to in-memory search.', e.message);
-      loadInMemoryFallback();
-    }
+    console.log('[proxy] Model loaded. Redis store is handling vectors.');
   } catch (err) {
     console.error('[proxy] Failed to initialize Vector Engine:', err.message);
-    loadInMemoryFallback();
   }
 }
 
-function loadInMemoryFallback() {
-  try {
-    vectorDB = JSON.parse(fs.readFileSync('site24x7_vector.json', 'utf8'));
-    console.log(`[proxy] In-memory fallback loaded: ${Object.keys(vectorDB).length} APIs.`);
-  } catch(e) {
-    console.error('[proxy] Could not load in-memory fallback either:', e.message);
-  }
-}
 
 function cosineSimilarity(vecA, vecB) {
   let dotProduct = 0.0, normA = 0.0, normB = 0.0;
@@ -199,63 +177,21 @@ const server = http.createServer(async (req, res) => {
       const queryVector = Array.from(output.data);
       
       let results = [];
-      let sourcedFromRedis = false;
-      if (redisClient) {
-        try {
-          const float32 = new Float32Array(queryVector);
-          const blob = Buffer.from(float32.buffer);
-          
-          const raw = await redisClient.call(
-            'FT.SEARCH', 'idx:api_vectors',
-            '*=>[KNN 50 @embedding $BLOB AS score]',
-            'PARAMS', '2', 'BLOB', blob,
-            'DIALECT', '2',
-            'RETURN', '2', 'api_id', 'score',
-            'SORTBY', 'score',
-            'LIMIT', '0', '50'
-          );
-          
-          const total = raw[0];
-          console.log(`[proxy] Redis KNN returned ${total} results.`);
-          const seen = new Set();
-          
-          for (let i = 1; i < raw.length; i += 2) {
-            const fields = raw[i + 1];
-            let apiId = null, score = null;
-            for (let j = 0; j < fields.length; j += 2) {
-              if (fields[j] === 'api_id') apiId = fields[j + 1];
-              if (fields[j] === 'score') score = fields[j + 1];
-            }
-            if (apiId !== null && !seen.has(apiId)) {
-              seen.add(apiId);
-              const similarity = 1 - parseFloat(score); // COSINE distance → similarity
-              results.push({ id: parseInt(apiId, 10), score: similarity });
-            }
-          }
-          
-          results.sort((a, b) => b.score - a.score);
-          sourcedFromRedis = true;
-        } catch (redisErr) {
-          console.warn('[proxy] Redis KNN failed, falling back to in-memory:', redisErr.message);
-        }
-      }
+      const apiIds = await vectorStore.getAllVectorIds();
       
-      if (!sourcedFromRedis) {
-        // Fallback
-        if (!vectorDB) {
-          return json(res, 503, { error: 'No vector DB available. Run migrate_to_redis.js' });
-        }
+      for (const apiId of apiIds) {
+        const embeddings = await vectorStore.getVector(apiId);
+        if (!embeddings) continue;
         
-        for (const apiId in vectorDB) {
-          let best = -1;
-          for (const vec of vectorDB[apiId]) {
-            const s = cosineSimilarity(queryVector, vec);
-            if (s > best) best = s;
-          }
-          if (best > 0.15) results.push({ id: parseInt(apiId, 10), score: best });
+        let best = -1;
+        for (const vec of embeddings) {
+          const s = cosineSimilarity(queryVector, vec);
+          if (s > best) best = s;
         }
-        results.sort((a, b) => b.score - a.score);
+        if (best > 0.15) results.push({ id: parseInt(apiId, 10), score: best });
       }
+      results.sort((a, b) => b.score - a.score);
+
       
       const finalResults = results.slice(0, 50);
       
