@@ -21,14 +21,10 @@ const template = fs.readFileSync('./src/template.html', 'utf8');
 console.log('Building index.html...');
 let html = template;
 
-const openaiKey = process.env.OPENAI_API_KEY || '';
-const openaiBase = process.env.OPENAI_BASE_URL || '';
-const openaiModel = process.env.OPENAI_MODEL || '';
+const openaiKeyPresent = !!process.env.OPENAI_API_KEY;
 
 const scriptInjection = `<script>
-  window.__OPENAI_API_KEY__ = "${openaiKey}";
-  window.__OPENAI_BASE_URL__ = "${openaiBase}";
-  window.__OPENAI_MODEL__ = "${openaiModel}";
+  window.__AI_AGENT_ENABLED__ = ${openaiKeyPresent};
 </script>`;
 
 if (html.includes('</head>')) {

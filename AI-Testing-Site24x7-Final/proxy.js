@@ -131,7 +131,56 @@ const server = http.createServer(async (req, res) => {
 
   // ── GET /status ─────────────────────────────────────────────────────────────
   if (path === '/status' && req.method === 'GET') {
-    return json(res, 200, { ok: true, hasCookie: !!storedCookie, hasAuthToken: !!storedAuthToken, port: PORT });
+    return json(res, 200, { 
+      ok: true, 
+      hasCookie: !!storedCookie, 
+      hasAuthToken: !!storedAuthToken, 
+      hasOpenAI: !!process.env.OPENAI_API_KEY,
+      port: PORT 
+    });
+  }
+
+  // ── POST /chat ──────────────────────────────────────────────────────────────
+  if (path === '/chat' && req.method === 'POST') {
+    const body = await readBody(req);
+    try {
+      const data = JSON.parse(body);
+      const messages = data.messages;
+      if (!messages) {
+        return json(res, 400, { error: 'Missing "messages" field.' });
+      }
+
+      if (!process.env.OPENAI_API_KEY || !process.env.OPENAI_BASE_URL) {
+        return json(res, 500, { error: 'OpenAI is not configured on the server.' });
+      }
+
+      const url = process.env.OPENAI_BASE_URL.endsWith('/')
+        ? process.env.OPENAI_BASE_URL + 'chat/completions'
+        : process.env.OPENAI_BASE_URL + '/chat/completions';
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: process.env.OPENAI_MODEL || 'azure:primary/gpt-4.1',
+          messages: messages,
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        return json(res, response.status, { error: `LLM Error: ${errText}` });
+      }
+
+      const resData = await response.json();
+      return json(res, 200, resData);
+    } catch (e) {
+      return json(res, 500, { error: 'Failed to process chat: ' + e.message });
+    }
   }
 
   // ── POST /feedback ──────────────────────────────────────────────────────────

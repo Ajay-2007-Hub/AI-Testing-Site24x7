@@ -1110,28 +1110,20 @@
   }
 
   async function callLLM(messages) {
-    var apiKey = window.__OPENAI_API_KEY__;
-    var baseUrl = window.__OPENAI_BASE_URL__;
-    var model = window.__OPENAI_MODEL__;
-    if (!apiKey || !baseUrl) throw new Error("NO_API_KEY");
-    
-    var url = baseUrl.endsWith('/') ? baseUrl + 'chat/completions' : baseUrl + '/chat/completions';
-    
-    var res = await fetch(url, {
+    var proxyUrl = localStorage.getItem('s247_proxy_url') || (window.location.protocol + '//' + window.location.hostname + ':3334');
+    var res = await fetch(proxyUrl + '/chat', {
       method: "POST",
       headers: { 
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + apiKey 
+        "Content-Type": "application/json"
       },
-      body: JSON.stringify({ model: model, messages: messages, temperature: 0.7 })
+      body: JSON.stringify({ messages: messages })
     });
     
     if (!res.ok) {
-      var text = await res.text();
-      if (res.status === 429) throw new Error("Rate limit exceeded. Please wait a moment and try again.");
-      if (res.status === 400) throw new Error("Bad Request. The API key might be invalid or the prompt was rejected.");
-      if (res.status === 401 || res.status === 403) throw new Error("API Key is invalid or expired.");
-      throw new Error("HTTP " + res.status + ": " + text);
+      var errData = await res.json().catch(() => ({}));
+      var msg = errData.error || ("HTTP " + res.status);
+      if (msg.includes("NO_API_KEY") || res.status === 401 || res.status === 403) throw new Error("NO_API_KEY");
+      throw new Error(msg);
     }
     
     return await res.json();
@@ -1143,8 +1135,8 @@
     var txt = inputEl.value.trim();
     if (!txt) return;
     
-    if (!window.__OPENAI_API_KEY__) {
-      showToast('API Key not configured in build.');
+    if (!window.__AI_AGENT_ENABLED__) {
+      showToast('AI Agent not enabled in build.');
       return;
     }
     
@@ -1391,7 +1383,7 @@
     var action = window.aiExecActions[actionId];
     if (!action) return;
     
-    if (!window.__OPENAI_API_KEY__) return;
+    if (!window.__AI_AGENT_ENABLED__) return;
 
     var summaryIndex = aiChatHistory.length;
     aiChatHistory.push({ role: 'ai', text: 'Analyzing response...' });
