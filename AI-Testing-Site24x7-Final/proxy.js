@@ -167,7 +167,21 @@ const server = http.createServer(async (req, res) => {
     try {
       const sheetDescriptions = dbHelper.getSheetDescriptions();
       const apis = dbHelper.getAllApis();
-      return json(res, 200, { sheetDescriptions, apis });
+      
+      // Reconstruct modules object dynamically from APIs
+      const modules = {};
+      apis.forEach(api => {
+        if (api.module && api.subModule) {
+          if (!modules[api.module]) {
+            modules[api.module] = [];
+          }
+          if (!modules[api.module].includes(api.subModule)) {
+            modules[api.module].push(api.subModule);
+          }
+        }
+      });
+      
+      return json(res, 200, { sheetDescriptions, apis, modules });
     } catch (e) {
       return json(res, 500, { error: 'Failed to retrieve master API dataset: ' + e.message });
     }
