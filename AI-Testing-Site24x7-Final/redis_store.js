@@ -1,7 +1,7 @@
 const { Index } = require('@upstash/vector');
 
-const url = process.env.UPSTASH_VECTOR_URL;
-const token = process.env.UPSTASH_VECTOR_TOKEN;
+const url = process.env.UPSTASH_VECTOR_URL || process.env.UPSTASH_VECTOR_REST_URL;
+const token = process.env.UPSTASH_VECTOR_TOKEN || process.env.UPSTASH_VECTOR_REST_TOKEN;
 
 let index = null;
 if (url && token && !url.includes('your_upstash_vector_url_here') && url.trim() !== '') {

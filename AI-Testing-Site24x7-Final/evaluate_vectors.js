@@ -67,28 +67,31 @@ async function evaluateVectors() {
   let stats = { p1: 0, p3: 0, p5: 0 };
   let failedQueries = [];
   
+  const CONCURRENCY = 25;
+  const chunks = [];
+  for (let i = 0; i < validQueries.length; i += CONCURRENCY) {
+    chunks.push(validQueries.slice(i, i + CONCURRENCY));
+  }
+
   let count = 0;
-  for (const item of validQueries) {
-    // Generate vector for the test query
-    const output = await extractor(item.query, { pooling: 'mean', normalize: true });
-    const queryVector = Array.from(output.data);
+  for (const chunk of chunks) {
+    await Promise.all(chunk.map(async (item) => {
+      const output = await extractor(item.query, { pooling: 'mean', normalize: true });
+      const queryVector = Array.from(output.data);
+      const results = await vectorStore.queryVectors(queryVector, 100);
+      
+      let rank = results.findIndex(r => r.id === item.apiId);
+      if (rank === 0) stats.p1++;
+      if (rank >= 0 && rank < 3) stats.p3++;
+      if (rank >= 0 && rank < 5) {
+        stats.p5++;
+      } else {
+        failedQueries.push(`[Rank ${rank === -1 ? 'N/A' : rank + 1}] ${item.query}`);
+      }
+    }));
     
-    const results = await vectorStore.queryVectors(queryVector, 100);
-    
-    // Check rank
-    let rank = results.findIndex(r => r.id === item.apiId);
-    if (rank === 0) stats.p1++;
-    if (rank >= 0 && rank < 3) stats.p3++;
-    if (rank >= 0 && rank < 5) {
-      stats.p5++;
-    } else {
-      failedQueries.push(`[Rank ${rank === -1 ? 'N/A' : rank + 1}] ${item.query}`);
-    }
-    
-    count++;
-    if (count % 100 === 0) {
-      console.log(`Evaluated ${count}/${totalQueries} queries... Precision@1 so far: ${Math.round((stats.p1/count)*100)}%`);
-    }
+    count += chunk.length;
+    console.log(`Evaluated ${count}/${totalQueries} queries... Precision@1 so far: ${Math.round((stats.p1/count)*100)}%`);
   }
 
   let report = '\nVector Search Evaluation Results\n';

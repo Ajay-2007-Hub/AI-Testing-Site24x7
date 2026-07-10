@@ -3,8 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const { Index } = require('@upstash/vector');
 
-const url = process.env.UPSTASH_VECTOR_URL;
-const token = process.env.UPSTASH_VECTOR_TOKEN;
+const url = process.env.UPSTASH_VECTOR_URL || process.env.UPSTASH_VECTOR_REST_URL;
+const token = process.env.UPSTASH_VECTOR_TOKEN || process.env.UPSTASH_VECTOR_REST_TOKEN;
 
 if (!url || !token || url.includes('your_upstash_vector_url_here') || url.trim() === '') {
   console.error('\n============================================================');
