@@ -2,7 +2,11 @@ const fs = require('fs');
 require('dotenv').config();
 
 console.log('Loading database...');
-const data = JSON.parse(fs.readFileSync('site24x7_compact.json', 'utf8'));
+const dbHelper = require('./db');
+const data = {
+  sheetDescriptions: dbHelper.getSheetDescriptions(),
+  apis: dbHelper.getAllApis()
+};
 const dataJson = JSON.stringify(data);
 
 let tfidfJson = "null";

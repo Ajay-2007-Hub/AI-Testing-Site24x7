@@ -15,6 +15,28 @@ db.exec(`
     results_json TEXT,
     feedback TEXT DEFAULT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS sheet_descriptions (
+    sheet TEXT PRIMARY KEY,
+    description TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS apis (
+    id INTEGER PRIMARY KEY,
+    sheet TEXT,
+    subFeature TEXT,
+    endpoint TEXT,
+    method TEXT,
+    statusCode TEXT,
+    description TEXT,
+    requestFields TEXT,
+    responseFields TEXT,
+    summaryText TEXT,
+    requestPayload TEXT,
+    searchText TEXT,
+    module TEXT,
+    subModule TEXT
+  );
 `);
 
 /**
@@ -44,8 +66,75 @@ function updateFeedback(id, correct) {
   return info.changes > 0;
 }
 
+/**
+ * Get all API entries from SQLite
+ */
+function getAllApis() {
+  const stmt = db.prepare('SELECT * FROM apis');
+  const rows = stmt.all();
+  return rows.map(row => ({
+    ...row,
+    requestFields: JSON.parse(row.requestFields || '[]'),
+    responseFields: JSON.parse(row.responseFields || '[]')
+  }));
+}
+
+/**
+ * Get all sheet descriptions from SQLite as a key-value object
+ */
+function getSheetDescriptions() {
+  const stmt = db.prepare('SELECT * FROM sheet_descriptions');
+  const rows = stmt.all();
+  const descriptions = {};
+  for (const row of rows) {
+    descriptions[row.sheet] = row.description;
+  }
+  return descriptions;
+}
+
+/**
+ * Insert or replace a sheet description
+ */
+function saveSheetDescription(sheet, description) {
+  const stmt = db.prepare('INSERT OR REPLACE INTO sheet_descriptions (sheet, description) VALUES (?, ?)');
+  stmt.run(sheet, description);
+}
+
+/**
+ * Insert or replace an API entry
+ */
+function saveApi(api) {
+  const stmt = db.prepare(`
+    INSERT OR REPLACE INTO apis (
+      id, sheet, subFeature, endpoint, method, statusCode, description,
+      requestFields, responseFields, summaryText, requestPayload, searchText, module, subModule
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  stmt.run(
+    api.id,
+    api.sheet,
+    api.subFeature,
+    api.endpoint,
+    api.method,
+    api.statusCode,
+    api.description,
+    JSON.stringify(api.requestFields || []),
+    JSON.stringify(api.responseFields || []),
+    api.summaryText,
+    api.requestPayload,
+    api.searchText,
+    api.module,
+    api.subModule
+  );
+}
+
 module.exports = {
   db,
   logQuery,
-  updateFeedback
+  updateFeedback,
+  getAllApis,
+  getSheetDescriptions,
+  saveSheetDescription,
+  saveApi
 };
+

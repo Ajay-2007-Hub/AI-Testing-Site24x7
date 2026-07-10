@@ -1,4 +1,6 @@
+require('dotenv').config();
 const fs = require('fs');
+const vectorStore = require('./redis_store');
 
 // Helper function to compute cosine similarity between two vectors
 function cos_sim(arr1, arr2) {
@@ -21,7 +23,11 @@ async function evaluateVectors() {
 
   console.log("Loading databases...");
   const vectorDB = JSON.parse(fs.readFileSync('site24x7_vector.json', 'utf8'));
-  const data = JSON.parse(fs.readFileSync('site24x7_compact.json', 'utf8'));
+  const dbHelper = require('./db');
+  const data = {
+    sheetDescriptions: dbHelper.getSheetDescriptions(),
+    apis: dbHelper.getAllApis()
+  };
   const apis = data.apis;
 
   const csv = fs.readFileSync('site24x7_Dataset.csv', 'utf8');
@@ -67,24 +73,7 @@ async function evaluateVectors() {
     const output = await extractor(item.query, { pooling: 'mean', normalize: true });
     const queryVector = Array.from(output.data);
     
-    // Compare against the Vector DB
-    const results = [];
-    for (const [apiId, apiVectors] of Object.entries(vectorDB)) {
-      if (!apiVectors || apiVectors.length === 0) continue;
-      
-      let maxScore = -1;
-      if (Array.isArray(apiVectors[0])) {
-        for (const vec of apiVectors) {
-          const score = cos_sim(queryVector, vec);
-          if (score > maxScore) maxScore = score;
-        }
-      } else {
-        maxScore = cos_sim(queryVector, apiVectors);
-      }
-      results.push({ id: parseInt(apiId), score: maxScore });
-    }
-    
-    results.sort((a, b) => b.score - a.score);
+    const results = await vectorStore.queryVectors(queryVector, 100);
     
     // Check rank
     let rank = results.findIndex(r => r.id === item.apiId);

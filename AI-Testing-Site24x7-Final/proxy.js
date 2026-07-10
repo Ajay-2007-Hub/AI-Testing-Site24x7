@@ -41,8 +41,7 @@ async function initVectorEngine() {
     console.error('[proxy] Failed to initialize Vector Engine:', err.message);
   }
 }
-
-
+/*
 function cosineSimilarity(vecA, vecB) {
   let dotProduct = 0.0, normA = 0.0, normB = 0.0;
   for (let i = 0; i < vecA.length; i++) {
@@ -53,6 +52,7 @@ function cosineSimilarity(vecA, vecB) {
   if (normA === 0 || normB === 0) return 0;
   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
+*/
 initVectorEngine();
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -162,6 +162,16 @@ const server = http.createServer(async (req, res) => {
       return json(res, 500, { error: 'Failed to compute accuracy stats: ' + e.message });
     }
   }
+  // ── GET /api_dataset ────────────────────────────────────────────────────────
+  if (path === '/api_dataset' && req.method === 'GET') {
+    try {
+      const sheetDescriptions = dbHelper.getSheetDescriptions();
+      const apis = dbHelper.getAllApis();
+      return json(res, 200, { sheetDescriptions, apis });
+    } catch (e) {
+      return json(res, 500, { error: 'Failed to retrieve master API dataset: ' + e.message });
+    }
+  }
   // ── GET /semantic_search ────────────────────────────────────────────────────
   if (path === '/semantic_search' && req.method === 'GET') {
     if (!extractor) {
@@ -176,23 +186,7 @@ const server = http.createServer(async (req, res) => {
       const output = await extractor(q, { pooling: 'mean', normalize: true });
       const queryVector = Array.from(output.data);
       
-      let results = [];
-      const apiIds = await vectorStore.getAllVectorIds();
-      
-      for (const apiId of apiIds) {
-        const embeddings = await vectorStore.getVector(apiId);
-        if (!embeddings) continue;
-        
-        let best = -1;
-        for (const vec of embeddings) {
-          const s = cosineSimilarity(queryVector, vec);
-          if (s > best) best = s;
-        }
-        if (best > 0.15) results.push({ id: parseInt(apiId, 10), score: best });
-      }
-      results.sort((a, b) => b.score - a.score);
-
-      
+      const results = await vectorStore.queryVectors(queryVector, 100);
       const finalResults = results.slice(0, 50);
       
       // Log to SQLite

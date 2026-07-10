@@ -8,7 +8,8 @@
   var TFIDF_DB = null;
   
   try {
-    var resDB = await fetch('site24x7_compact.json');
+    var proxyUrl = localStorage.getItem('s247_proxy_url') || (window.location.protocol + '//' + window.location.hostname + ':3334');
+    var resDB = await fetch(proxyUrl + '/api_dataset');
     if (!resDB.ok) throw new Error('Failed to load API data');
     DB = await resDB.json();
     

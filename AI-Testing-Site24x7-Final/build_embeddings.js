@@ -7,7 +7,11 @@ async function buildEmbeddings() {
   console.log("Loading all-MiniLM-L6-v2 model...");
   const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
 
-  const data = JSON.parse(fs.readFileSync('site24x7_compact.json', 'utf8'));
+  const dbHelper = require('./db');
+  const data = {
+    sheetDescriptions: dbHelper.getSheetDescriptions(),
+    apis: dbHelper.getAllApis()
+  };
   const apis = data.apis;
   
   // vectors[api.id] = array of vectors

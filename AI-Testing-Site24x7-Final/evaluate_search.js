@@ -1,6 +1,10 @@
 const fs = require('fs');
 
-const data = JSON.parse(fs.readFileSync('site24x7_compact.json', 'utf8'));
+const dbHelper = require('./db');
+const data = {
+  sheetDescriptions: dbHelper.getSheetDescriptions(),
+  apis: dbHelper.getAllApis()
+};
 const apis = data.apis;
 const tfidf = JSON.parse(fs.readFileSync('tfidf_index.json', 'utf8'));
 
