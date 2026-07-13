@@ -1,15 +1,21 @@
 {
-  "name": "site24x7-api-search-root",
+  "name": "site24x7-api-search",
   "version": "0.1.0",
-  "private": true,
+  "description": "AI-powered search and testing tool for Site24x7 Admin APIs",
   "scripts": {
-    "build": "npm run build --prefix AI-Testing-Site24x7-Final",
-    "serve": "npx serve AI-Testing-Site24x7-Final --listen 3333 --no-clipboard",
-    "proxy": "npm run proxy --prefix AI-Testing-Site24x7-Final",
-    "start": "npm run build --prefix AI-Testing-Site24x7-Final && npx serve AI-Testing-Site24x7-Final --listen 3333 --no-clipboard",
-    "dev": "npm run build --prefix AI-Testing-Site24x7-Final && start cmd /k \"npm run proxy --prefix AI-Testing-Site24x7-Final\" && npx serve AI-Testing-Site24x7-Final --listen 3333 --no-clipboard"
+    "build": "node generate_html.js",
+    "serve": "npx serve . --listen 3333 --no-clipboard",
+    "proxy": "node proxy.js",
+    "start": "npm run build && npm run serve",
+    "dev": "npm run build && start cmd /k \"node proxy.js\" && npm run serve"
   },
   "dependencies": {
-    "@upstash/redis": "^1.38.0"
+    "@upstash/vector": "^1.1.3",
+    "@xenova/transformers": "^2.17.2",
+    "better-sqlite3": "^10.0.0",
+    "dotenv": "^17.4.2",
+    "ioredis": "^5.11.1",
+    "jsdom": "^29.1.1",
+    "xlsx": "^0.18.5"
   }
 }
